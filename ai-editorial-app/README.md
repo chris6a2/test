@@ -1,14 +1,16 @@
-# AI Editorial App
+# AI Editorial App (PWA)
 
-A standalone web application for generating AI-powered article drafts on demand.
+A Progressive Web App for generating AI-powered article drafts on demand. Works on iPad, iPhone, Android, and desktop browsers.
 
 ## Features
 
-- **Dashboard** - Overview of all articles with stats
+- **Progressive Web App** - Install on your home screen
+- **Works Offline** - Service worker caches the app
+- **Local Storage** - Data stored in browser (IndexedDB)
 - **Article Generation** - Generate News and Evergreen articles using Claude AI
-- **Article Editor** - Edit and preview articles before export
+- **Article Editor** - Edit and preview articles
 - **Export** - Export to Markdown, HTML, or JSON
-- **Local Storage** - All data stored in SQLite database
+- **Mobile-Friendly** - Responsive design for tablets and phones
 
 ## Quick Start
 
@@ -18,9 +20,39 @@ npm install
 
 # Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-repo/ai-editorial-app)
+
+Or deploy manually:
+
+```bash
+npm install -g vercel
+vercel
+```
+
+## Install as App
+
+### On iPad/iPhone
+1. Open the app in Safari
+2. Tap the Share button
+3. Select "Add to Home Screen"
+
+### On Android
+1. Open the app in Chrome
+2. Tap the menu (three dots)
+3. Select "Add to Home Screen"
+
+### On Desktop
+1. Open the app in Chrome/Edge
+2. Click the install icon in the address bar
 
 ## Configuration
 
@@ -31,43 +63,42 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Tech Stack
 
-- **Next.js 14** - React framework with App Router
+- **Next.js 14** - React framework (static export)
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
-- **SQLite** - Local database (via better-sqlite3)
-- **Claude API** - AI article generation
+- **IndexedDB** - Client-side database
+- **Service Worker** - Offline support
+- **Claude API** - AI article generation (called directly from browser)
 
 ## Project Structure
 
 ```
 ai-editorial-app/
+├── public/
+│   ├── manifest.json      # PWA manifest
+│   ├── sw.js              # Service worker
+│   └── icons/             # App icons
 ├── src/
-│   ├── app/                 # Next.js app router pages
-│   │   ├── api/            # API routes
-│   │   ├── articles/       # Articles pages
-│   │   └── settings/       # Settings page
-│   ├── components/         # React components
-│   ├── lib/                # Utilities
-│   │   ├── ai.ts          # Claude API integration
-│   │   ├── db.ts          # SQLite database layer
-│   │   └── prompt.ts      # Editorial system prompt
+│   ├── app/               # Next.js pages
+│   │   ├── page.tsx       # Dashboard
+│   │   ├── articles/      # Articles pages
+│   │   └── settings/      # Settings page
+│   ├── components/        # React components
+│   ├── lib/
+│   │   ├── storage.ts     # IndexedDB storage
+│   │   ├── ai-client.ts   # Claude API client
+│   │   └── prompt.ts      # Editorial prompt
 │   └── types/             # TypeScript types
-├── data/                   # SQLite database (created on first run)
 └── package.json
 ```
 
-## API Routes
+## Data Storage
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/api/articles` | List all articles |
-| POST | `/api/articles` | Create article |
-| GET | `/api/articles/[id]` | Get single article |
-| PUT | `/api/articles/[id]` | Update article |
-| DELETE | `/api/articles/[id]` | Delete article |
-| POST | `/api/generate` | Generate articles with AI |
-| GET | `/api/settings` | Get settings |
-| PUT | `/api/settings` | Update settings |
+All data is stored locally in your browser's IndexedDB:
+- Articles (title, content, metadata)
+- Settings (API key, model preference)
+
+**Important:** Clearing browser data will delete your articles. Export important articles before clearing data.
 
 ## Customization
 
@@ -82,6 +113,13 @@ The app supports multiple Claude models:
 - Claude Opus 4
 - Claude 3.5 Sonnet
 - Claude 3.5 Haiku (faster, lower cost)
+
+## Security Notes
+
+- Your API key is stored locally on your device
+- API key is sent only to Claude's API (api.anthropic.com)
+- No data is sent to any other server
+- The app uses `anthropic-dangerous-direct-browser-access` header for browser API calls
 
 ## License
 

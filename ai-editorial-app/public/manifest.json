@@ -1,0 +1,39 @@
+{
+  "name": "AI Editorial Agent",
+  "short_name": "AI Editorial",
+  "description": "Generate AI-powered article drafts on demand",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Generate Articles",
+      "short_name": "Generate",
+      "description": "Generate new AI articles",
+      "url": "/?generate=true"
+    },
+    {
+      "name": "View Articles",
+      "short_name": "Articles",
+      "description": "View all articles",
+      "url": "/articles"
+    }
+  ]
+}

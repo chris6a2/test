@@ -15,6 +15,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Article, ArticleUpdate } from '@/types';
+import { getArticle, updateArticle, deleteArticle, isClientSide } from '@/lib/storage';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,18 +42,19 @@ export default function ArticleDetailPage({ params }: PageProps) {
   }, [id]);
 
   const fetchArticle = async () => {
-    try {
-      const response = await fetch(`/api/articles/${id}`);
-      const data = await response.json();
+    if (!isClientSide()) return;
 
-      if (data.success) {
-        setArticle(data.data);
-        setTitle(data.data.title);
-        setSubheading(data.data.subheading || '');
-        setContent(data.data.content);
-        setStatus(data.data.status);
+    try {
+      const data = await getArticle(parseInt(id, 10));
+
+      if (data) {
+        setArticle(data);
+        setTitle(data.title);
+        setSubheading(data.subheading || '');
+        setContent(data.content);
+        setStatus(data.status);
       } else {
-        setError(data.error || 'Article not found');
+        setError('Article not found');
       }
     } catch (err) {
       setError('Failed to load article');
@@ -74,20 +76,14 @@ export default function ArticleDetailPage({ params }: PageProps) {
         status,
       };
 
-      const response = await fetch(`/api/articles/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
+      const updated = await updateArticle(parseInt(id, 10), updates);
 
-      const data = await response.json();
-
-      if (data.success) {
-        setArticle(data.data);
+      if (updated) {
+        setArticle(updated);
         setSuccessMessage('Article saved successfully');
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
-        throw new Error(data.error || 'Failed to save');
+        throw new Error('Failed to save');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save article');
@@ -104,16 +100,12 @@ export default function ArticleDetailPage({ params }: PageProps) {
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/articles/${id}`, {
-        method: 'DELETE',
-      });
+      const success = await deleteArticle(parseInt(id, 10));
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (success) {
         router.push('/articles');
       } else {
-        throw new Error(data.error || 'Failed to delete');
+        throw new Error('Failed to delete');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete article');
@@ -124,7 +116,7 @@ export default function ArticleDetailPage({ params }: PageProps) {
   const handleExport = async (format: 'markdown' | 'html' | 'json') => {
     if (!article) return;
 
-    let content = '';
+    let exportContent = '';
     let filename = '';
     let mimeType = '';
 
@@ -132,23 +124,23 @@ export default function ArticleDetailPage({ params }: PageProps) {
 
     switch (format) {
       case 'markdown':
-        content = formatAsMarkdown(article);
+        exportContent = formatAsMarkdown(article);
         filename = `${slug}.md`;
         mimeType = 'text/markdown';
         break;
       case 'html':
-        content = formatAsHtml(article);
+        exportContent = formatAsHtml(article);
         filename = `${slug}.html`;
         mimeType = 'text/html';
         break;
       case 'json':
-        content = JSON.stringify(article, null, 2);
+        exportContent = JSON.stringify(article, null, 2);
         filename = `${slug}.json`;
         mimeType = 'application/json';
         break;
     }
 
-    const blob = new Blob([content], { type: mimeType });
+    const blob = new Blob([exportContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -189,7 +181,7 @@ export default function ArticleDetailPage({ params }: PageProps) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <button
           onClick={() => router.push('/articles')}
           className="flex items-center gap-2 text-slate-600 hover:text-slate-900"
@@ -273,7 +265,7 @@ export default function ArticleDetailPage({ params }: PageProps) {
 
       {/* Article Meta */}
       <div className="card p-4 mb-6">
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-4 text-sm">
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-600">
             <TypeIcon className="h-3 w-3" />
             {article.type === 'news' ? 'News' : 'Evergreen'}
@@ -341,7 +333,7 @@ export default function ArticleDetailPage({ params }: PageProps) {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              rows={20}
+              rows={15}
               className="w-full px-4 py-3 border border-slate-300 rounded-lg font-mono text-sm"
               placeholder="Article content..."
             />
@@ -420,7 +412,6 @@ export default function ArticleDetailPage({ params }: PageProps) {
 
 // Helper functions for export
 function formatAsMarkdown(article: Article): string {
-  // Strip HTML tags for markdown
   const stripHtml = (html: string) => {
     return html
       .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '\n## $1\n')

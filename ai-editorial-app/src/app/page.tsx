@@ -5,33 +5,27 @@ import { Sparkles, FileText, Clock, TrendingUp, AlertCircle } from 'lucide-react
 import { Article } from '@/types';
 import { ArticleCard } from '@/components/ArticleCard';
 import { GenerateModal } from '@/components/GenerateModal';
+import { getArticles, getSettings, isClientSide } from '@/lib/storage';
 
 export default function DashboardPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
 
   const fetchData = async () => {
+    if (!isClientSide()) return;
+
     try {
-      const [articlesRes, settingsRes] = await Promise.all([
-        fetch('/api/articles'),
-        fetch('/api/settings'),
+      const [articlesData, settingsData] = await Promise.all([
+        getArticles(),
+        getSettings(),
       ]);
 
-      const articlesData = await articlesRes.json();
-      const settingsData = await settingsRes.json();
-
-      if (articlesData.success) {
-        setArticles(articlesData.data);
-      }
-
-      if (settingsData.success) {
-        setHasApiKey(settingsData.data.has_api_key);
-      }
+      setArticles(articlesData);
+      setHasApiKey(!!settingsData.api_key);
     } catch (err) {
-      setError('Failed to load dashboard data');
+      console.error('Failed to load dashboard data:', err);
     } finally {
       setIsLoading(false);
     }

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, Smartphone } from 'lucide-react';
+import { getSettings, updateSettings, isClientSide } from '@/lib/storage';
 
 interface SettingsData {
   api_key: string;
@@ -26,15 +27,20 @@ export default function SettingsPage() {
   }, []);
 
   const fetchSettings = async () => {
-    try {
-      const response = await fetch('/api/settings');
-      const data = await response.json();
+    if (!isClientSide()) return;
 
-      if (data.success) {
-        setSettings(data.data);
-        setModel(data.data.model);
-        // Don't populate API key - it's masked
-      }
+    try {
+      const data = await getSettings();
+      const maskedKey = data.api_key
+        ? `${'*'.repeat(Math.max(0, data.api_key.length - 4))}${data.api_key.slice(-4)}`
+        : '';
+
+      setSettings({
+        api_key: maskedKey,
+        model: data.model,
+        has_api_key: !!data.api_key,
+      });
+      setModel(data.model);
     } catch (err) {
       setError('Failed to load settings');
     } finally {
@@ -49,33 +55,44 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      const updates: Record<string, string> = { model };
+      const updates: { api_key?: string; model: string } = { model };
 
       // Only include API key if user entered a new one
       if (apiKey.trim()) {
         updates.api_key = apiKey.trim();
       }
 
-      const response = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+      await updateSettings(updates);
+
+      // Refresh settings display
+      const data = await getSettings();
+      const maskedKey = data.api_key
+        ? `${'*'.repeat(Math.max(0, data.api_key.length - 4))}${data.api_key.slice(-4)}`
+        : '';
+
+      setSettings({
+        api_key: maskedKey,
+        model: data.model,
+        has_api_key: !!data.api_key,
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setSettings(data.data);
-        setApiKey(''); // Clear the input
-        setSuccess('Settings saved successfully');
-        setTimeout(() => setSuccess(null), 3000);
-      } else {
-        throw new Error(data.error || 'Failed to save');
-      }
+      setApiKey(''); // Clear the input
+      setSuccess('Settings saved successfully');
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleInstallPWA = () => {
+    // Check if deferredPrompt is available (set by beforeinstallprompt event)
+    const deferredPrompt = (window as unknown as { deferredPrompt?: { prompt: () => void } }).deferredPrompt;
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+    } else {
+      alert('To install: tap the Share button in your browser, then "Add to Home Screen"');
     }
   };
 
@@ -213,7 +230,50 @@ export default function SettingsPage() {
         </div>
       </form>
 
-      {/* Additional Info */}
+      {/* Install as App */}
+      <div className="card p-6 mt-6">
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Smartphone className="h-6 w-6 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">
+              Install as App
+            </h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Add AI Editorial to your home screen for quick access. On iOS, tap
+              the Share button and select &quot;Add to Home Screen&quot;.
+            </p>
+            <button
+              onClick={handleInstallPWA}
+              className="btn btn-secondary text-sm"
+            >
+              <Smartphone className="h-4 w-4 mr-2" />
+              Install App
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Storage Info */}
+      <div className="card p-6 mt-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Data Storage
+        </h2>
+        <p className="text-sm text-slate-600 mb-3">
+          All data is stored locally on this device using your browser&apos;s
+          IndexedDB. Your data stays on your device and is never sent to any
+          server (except your API key is sent to Claude when generating articles).
+        </p>
+        <ul className="text-sm text-slate-500 space-y-1 list-disc list-inside">
+          <li>Articles are stored locally</li>
+          <li>Settings are stored locally</li>
+          <li>Data persists between sessions</li>
+          <li>Clearing browser data will delete your articles</li>
+        </ul>
+      </div>
+
+      {/* About the Editorial Prompt */}
       <div className="card p-6 mt-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
           About the Editorial Prompt
@@ -228,22 +288,6 @@ export default function SettingsPage() {
           <li>Edit for publication-quality content</li>
           <li>Generate both News and Evergreen articles</li>
         </ul>
-        <p className="text-sm text-slate-500 mt-4">
-          The prompt is defined in <code className="bg-slate-100 px-1 py-0.5 rounded">src/lib/prompt.ts</code> and
-          can be customized to match your publication's style.
-        </p>
-      </div>
-
-      {/* Data Storage Info */}
-      <div className="card p-6 mt-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Data Storage
-        </h2>
-        <p className="text-sm text-slate-600">
-          All data is stored locally in a SQLite database at{' '}
-          <code className="bg-slate-100 px-1 py-0.5 rounded">data/editorial.db</code>.
-          Your API key is stored securely and never sent anywhere except to the Claude API.
-        </p>
       </div>
     </div>
   );

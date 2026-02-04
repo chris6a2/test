@@ -1,32 +1,40 @@
 /**
- * AI Service Layer
+ * Client-Side AI Service
  *
- * Handles communication with the Claude API for article generation
+ * Handles communication with the Claude API directly from the browser
  */
 
-import { AIArticleResponse, ArticleInsert } from '@/types';
-import { getSettings } from './db';
+import { ArticleInsert } from '@/types';
 import { EDITORIAL_SYSTEM_PROMPT } from './prompt';
 
 const API_ENDPOINT = 'https://api.anthropic.com/v1/messages';
-
-interface ClaudeMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
 
 interface ClaudeResponse {
   content: { type: string; text: string }[];
   error?: { message: string };
 }
 
-/**
- * Generate articles using the Claude API
- */
-export async function generateArticles(topic?: string): Promise<ArticleInsert[]> {
-  const settings = getSettings();
+interface AIArticleResponse {
+  articles?: Array<{
+    type: string;
+    title: string;
+    subheading?: string;
+    content: string;
+    category: string;
+    tags?: string[];
+    sources?: Array<{ title: string; url?: string; description?: string }>;
+  }>;
+}
 
-  if (!settings.api_key) {
+/**
+ * Generate articles using the Claude API (client-side)
+ */
+export async function generateArticles(
+  apiKey: string,
+  model: string,
+  topic?: string
+): Promise<ArticleInsert[]> {
+  if (!apiKey) {
     throw new Error('API key is not configured. Please add your Claude API key in Settings.');
   }
 
@@ -47,12 +55,10 @@ export async function generateArticles(topic?: string): Promise<ArticleInsert[]>
   userMessage += 'Generate the articles as specified in your instructions. Return the response as valid JSON only.';
 
   // Make API request
-  const response = await callClaudeAPI(settings.api_key, settings.model, userMessage);
+  const response = await callClaudeAPI(apiKey, model, userMessage);
 
   // Parse and validate response
-  const articles = parseAIResponse(response);
-
-  return articles;
+  return parseAIResponse(response);
 }
 
 /**
@@ -72,7 +78,7 @@ async function callClaudeAPI(
         role: 'user',
         content: userMessage,
       },
-    ] as ClaudeMessage[],
+    ],
   };
 
   const response = await fetch(API_ENDPOINT, {
@@ -81,6 +87,7 @@ async function callClaudeAPI(
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify(requestBody),
   });

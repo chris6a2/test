@@ -5,6 +5,7 @@ import { Sparkles, Filter } from 'lucide-react';
 import { Article } from '@/types';
 import { ArticleCard } from '@/components/ArticleCard';
 import { GenerateModal } from '@/components/GenerateModal';
+import { getArticles, getSettings, isClientSide } from '@/lib/storage';
 
 type FilterStatus = 'all' | 'draft' | 'published' | 'archived';
 type FilterType = 'all' | 'news' | 'evergreen';
@@ -15,14 +16,18 @@ export default function ArticlesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
+  const [hasApiKey, setHasApiKey] = useState(false);
 
   const fetchArticles = async () => {
+    if (!isClientSide()) return;
+
     try {
-      const response = await fetch('/api/articles');
-      const data = await response.json();
-      if (data.success) {
-        setArticles(data.data);
-      }
+      const [articlesData, settings] = await Promise.all([
+        getArticles(),
+        getSettings(),
+      ]);
+      setArticles(articlesData);
+      setHasApiKey(!!settings.api_key);
     } catch (err) {
       console.error('Failed to fetch articles:', err);
     } finally {
@@ -65,7 +70,9 @@ export default function ArticlesPage() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
+          disabled={!hasApiKey}
           className="btn btn-primary"
+          title={!hasApiKey ? 'Configure API key in Settings first' : ''}
         >
           <Sparkles className="h-4 w-4 mr-2" />
           Generate Articles
@@ -74,7 +81,7 @@ export default function ArticlesPage() {
 
       {/* Filters */}
       <div className="card p-4 mb-6">
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-4 md:gap-6">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Filter className="h-4 w-4" />
             Filters:

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#2563eb"/>
+  <g fill="white">
+    <!-- Document icon -->
+    <rect x="140" y="80" width="232" height="300" rx="16" fill="white" opacity="0.9"/>
+    <!-- Lines representing text -->
+    <rect x="172" y="130" width="168" height="16" rx="4" fill="#2563eb"/>
+    <rect x="172" y="166" width="140" height="12" rx="3" fill="#93c5fd"/>
+    <rect x="172" y="198" width="168" height="12" rx="3" fill="#93c5fd"/>
+    <rect x="172" y="230" width="120" height="12" rx="3" fill="#93c5fd"/>
+    <rect x="172" y="262" width="168" height="12" rx="3" fill="#93c5fd"/>
+    <rect x="172" y="294" width="90" height="12" rx="3" fill="#93c5fd"/>
+    <!-- Sparkle/AI indicator -->
+    <circle cx="380" cy="400" r="80" fill="#fbbf24"/>
+    <path d="M380 340 L390 380 L430 380 L398 405 L410 445 L380 420 L350 445 L362 405 L330 380 L370 380 Z" fill="white"/>
+  </g>
+</svg>
